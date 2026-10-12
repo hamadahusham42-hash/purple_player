@@ -36,9 +36,9 @@ jobs:
         working-directory: ${{ env.PROJ }}
         run: flutter create --platforms=android --org com.university .
 
-      - name: Set app name
+      - name: Patch Android project
         working-directory: ${{ env.PROJ }}
-        run: sed -i 's/android:label="[^"]*"/android:label="Purple Player"/' android/app/src/main/AndroidManifest.xml
+        run: python3 patch_android.py
 
       - name: Install packages
         working-directory: ${{ env.PROJ }}
