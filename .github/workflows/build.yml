@@ -1,0 +1,59 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Unzip project
+        run: |
+          ZIP=$(find . -maxdepth 2 -name "*.zip" -not -path "./.git/*" | head -1)
+          echo "Found zip: $ZIP"
+          unzip -q "$ZIP" -d work
+          PROJ=$(dirname "$(find work -name pubspec.yaml | head -1)")
+          echo "PROJ=$PROJ" >> "$GITHUB_ENV"
+          echo "Project folder: $PROJ"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Generate Android project
+        working-directory: ${{ env.PROJ }}
+        run: flutter create --platforms=android --org com.university .
+
+      - name: Set app name
+        working-directory: ${{ env.PROJ }}
+        run: sed -i 's/android:label="[^"]*"/android:label="Purple Player"/' android/app/src/main/AndroidManifest.xml
+
+      - name: Install packages
+        working-directory: ${{ env.PROJ }}
+        run: flutter pub get
+
+      - name: Generate launcher icons
+        working-directory: ${{ env.PROJ }}
+        run: dart run flutter_launcher_icons
+
+      - name: Build release APK
+        working-directory: ${{ env.PROJ }}
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: purple-player-apk
+          path: ${{ env.PROJ }}/build/app/outputs/flutter-apk/app-release.apk
